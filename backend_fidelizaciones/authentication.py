@@ -21,13 +21,8 @@ class CustomAuthMiddleware(MiddlewareMixin):
 
         try:
             id_token = id_token.split(' ')[1]
-            decoded_token = auth.verify_id_token(id_token)
-            uid = decoded_token['uid']  # ID único de Firebase del usuario
-            return JsonResponse({
-                'message': 'Authentication successful',
-                'uid': uid,
-                'decoded_token': decoded_token
-            }, status=200)
+            auth.verify_id_token(id_token)
+            return None
 
         except Exception as e:
             raise AuthenticationFailed(f'Authentication failed: {str(e)}')

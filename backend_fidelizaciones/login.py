@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.response import Response
 
 class FirebaseLoginView(APIView):
+
     def post(self, request):
         email = request.data.get("email")
         password = request.data.get("password")

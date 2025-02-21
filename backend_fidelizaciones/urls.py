@@ -14,13 +14,16 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.contrib import admin
 from django.urls import path, include
 
 from backend_fidelizaciones.login import FirebaseLoginView
 
-urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('api/users/', include('users.urls')),
+api_patterns = [
     path('firebase-login/', FirebaseLoginView.as_view(), name='firebase-auth'),
+    path('users/', include('users.urls')),
+    path('restaurants/', include('restaurants.urls')),
+]
+
+urlpatterns = [
+    path('api/', include(api_patterns)),
 ]
