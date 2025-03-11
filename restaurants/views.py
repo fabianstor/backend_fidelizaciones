@@ -7,7 +7,7 @@ from rest_framework.response import Response
 class RestaurantsView(APIView):
 
     def post(self, request):
-        name = request.data.get("name")
+        name = request.data.get("name", "")
         email = request.data.get("email", "")
         image = request.data.get("image", "")
         rate = request.data.get("rate", "")
@@ -25,10 +25,9 @@ class RestaurantsView(APIView):
         restaurants = db.collection("restaurants").stream()
         response = []
         for restaurant in restaurants:
-            response.append({
-                "id": restaurant.id,
-                "data": restaurant.to_dict()
-            })
+            restaurant_data = restaurant.to_dict()
+            restaurant_data["id"] = restaurant.id
+            response.append(restaurant_data)
         return Response(response, status=status.HTTP_200_OK)
 
     def put(self, request, restaurant_id):
