@@ -3,6 +3,12 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
+def clean_firestore_data(data):
+    for key, value in data.items():
+        if hasattr(value, 'path'):  # Es un DocumentReference
+            data[key] = value.path  # o value.id si solo quieres el ID
+    return data
+
 
 class RestaurantsView(APIView):
 
@@ -26,13 +32,25 @@ class RestaurantsView(APIView):
     def get(self, request):
         restaurants = db.collection("menus").stream()
         response = []
+
         for restaurant in restaurants:
-            foods = db.collection("foods").where("menu", "==", restaurant.id).stream()
-            foods_list = [food.to_dict() for food in foods]
+            menu_ref = db.document(f"menus/{restaurant.id}")
+            foods = db.collection("foods").where("menu", "==", menu_ref).stream()
+
+            foods_list = []
+            for food in foods:
+                food_dict = food.to_dict()
+                clean_firestore_data(food_dict)
+                food_dict["id"] = food.id
+                foods_list.append(food_dict)
+
             restaurant_data = restaurant.to_dict()
+            clean_firestore_data(restaurant_data)
             restaurant_data["foods"] = foods_list
             restaurant_data["id"] = restaurant.id
+
             response.append(restaurant_data)
+
         return Response({"message": "Restaurants list", "data": response}, status=status.HTTP_200_OK)
 
     def put(self, request, restaurant_id):

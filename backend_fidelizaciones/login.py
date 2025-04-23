@@ -50,7 +50,8 @@ class FirebaseLoginView(APIView):
                 "email": user.get("email"),
                 "role": user.get("role"),
                 "favorites": user.get("favorites"),
-                'token': id_token,
+                'id_token': id_token,
+                'tokens': 10,
                 'refresh_token': refresh_token
             }, status=status.HTTP_200_OK)
 
