@@ -22,6 +22,7 @@ api_patterns = [
     path('firebase-login/', FirebaseLoginView.as_view(), name='firebase-auth'),
     path('users/', include('users.urls')),
     path('restaurants/', include('restaurants.urls')),
+    path('menus/', include('menus.urls')),
 ]
 
 urlpatterns = [

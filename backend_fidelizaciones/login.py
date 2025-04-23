@@ -1,7 +1,9 @@
 import requests
+from firebase_config import db
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.response import Response
+
 
 class FirebaseLoginView(APIView):
 
@@ -36,10 +38,19 @@ class FirebaseLoginView(APIView):
 
             # Opcionalmente, también puedes obtener el refresh token si lo necesitas
             refresh_token = response_data.get('refreshToken')
-
+            user_query = db.collection("users").where("email", "==", email).stream()
+            user = next(user_query, None)
+            if not user:
+                return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+            user = user.to_dict()
             # Devolver el id_token y refresh_token como respuesta al frontend
             return Response({
-                'id_token': id_token,
+                "id": "1",
+                "name": user.get("name"),
+                "email": user.get("email"),
+                "role": user.get("role"),
+                "favorites": user.get("favorites"),
+                'token': id_token,
                 'refresh_token': refresh_token
             }, status=status.HTTP_200_OK)
 

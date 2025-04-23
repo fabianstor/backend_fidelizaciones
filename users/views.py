@@ -11,6 +11,8 @@ class CreateUserAPIView(APIView):
     def post(self, request):
         email = request.data.get("email")
         password = request.data.get("password")
+        name = request.data.get("name")
+        favorites = request.data.get("favorites", [])
         display_name = request.data.get("display_name", "")
 
         if not email or not password:
@@ -23,6 +25,14 @@ class CreateUserAPIView(APIView):
                 password=password,
                 display_name=display_name,
             )
+            users = db.collection("users")
+            # Agrega el usuario a Firestore
+            users.add({
+                "name": name,
+                "role": "client",
+                "favorites": favorites,
+                "email": email,
+            })
 
             return Response({
                 "message": "User created successfully",

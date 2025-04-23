@@ -11,11 +11,13 @@ class RestaurantsView(APIView):
         email = request.data.get("email", "")
         image = request.data.get("image", "")
         rate = request.data.get("rate", "")
+        address = request.data.get("address", "")
 
         restaurant = db.collection("restaurants")
         restaurant.add({
             "name": name,
             "email": email,
+            "address": address,
             "image": image,
             "rate": rate
         })
@@ -33,14 +35,12 @@ class RestaurantsView(APIView):
 
     def put(self, request, restaurant_id):
         name = request.data.get("name")
-        email = request.data.get("email", "")
         image = request.data.get("image", "")
         rate = request.data.get("rate", "")
 
         restaurant = db.collection("restaurants").document(restaurant_id)
         restaurant.update({
             "name": name,
-            "email": email,
             "image": image,
             "rate": rate
         })
