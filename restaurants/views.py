@@ -24,13 +24,16 @@ class RestaurantsView(APIView):
         return Response({"message": "Restaurant created successfully"}, status=status.HTTP_201_CREATED)
 
     def get(self, request):
-        restaurants = db.collection("restaurants").stream()
+        restaurants = db.collection("menus").stream()
         response = []
         for restaurant in restaurants:
+            foods = db.collection("foods").where("menu", "==", restaurant.id).stream()
+            foods_list = [food.to_dict() for food in foods]
             restaurant_data = restaurant.to_dict()
+            restaurant_data["foods"] = foods_list
             restaurant_data["id"] = restaurant.id
             response.append(restaurant_data)
-        return Response(response, status=status.HTTP_200_OK)
+        return Response({"message": "Restaurants list", "data": response}, status=status.HTTP_200_OK)
 
     def put(self, request, restaurant_id):
         name = request.data.get("name")
