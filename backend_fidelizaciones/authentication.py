@@ -1,6 +1,7 @@
 from firebase_admin import auth
 from django.http import JsonResponse
 from rest_framework.exceptions import AuthenticationFailed
+from firebase_admin.auth import ExpiredIdTokenError
 from django.utils.deprecation import MiddlewareMixin
 from firebase_admin import auth
 
@@ -23,6 +24,9 @@ class CustomAuthMiddleware(MiddlewareMixin):
             id_token = id_token.split(' ')[1]
             auth.verify_id_token(id_token)
             return None
+
+        except ExpiredIdTokenError:
+            return JsonResponse({'error': 'Token expired'}, status=401)
 
         except Exception as e:
             raise AuthenticationFailed(f'Authentication failed: {str(e)}')
