@@ -14,27 +14,31 @@ class RestaurantsView(APIView):
 
     def post(self, request):
         name = request.data.get("name", "")
+        description = request.data.get("description", "")
         email = request.data.get("email", "")
         image = request.data.get("image", "")
         rate = request.data.get("rate", "")
+        tags = request.data.get("tags", [])
         address = request.data.get("address", "")
 
         restaurant = db.collection("restaurants")
         restaurant.add({
             "name": name,
             "email": email,
+            "description": description,
             "address": address,
+            "tags": tags,
             "image": image,
             "rate": rate
         })
         return Response({"message": "Restaurant created successfully"}, status=status.HTTP_201_CREATED)
 
     def get(self, request):
-        restaurants = db.collection("menus").stream()
+        restaurants = db.collection("restaurants").stream()
         response = []
 
         for restaurant in restaurants:
-            menu_ref = db.document(f"menus/{restaurant.id}")
+            menu_ref = db.document(f"restaurants/{restaurant.id}")
             foods = db.collection("foods").where("menu", "==", menu_ref).stream()
 
             foods_list = []
