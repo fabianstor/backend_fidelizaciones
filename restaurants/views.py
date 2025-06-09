@@ -19,14 +19,12 @@ class RestaurantsView(APIView):
 
     def post(self, request):
         name = request.data.get("name", "")
-        owner_name = request.data.get("owner", "")
+        owner_name = request.data.get("owner_name", "")
         description = request.data.get("description", "")
         email = request.data.get("email", "")
         phone_number = request.data.get("phone_number", "")
         tags = request.data.get("tags", [])
         address = request.data.get("address", "")
-        tags = request.data.get("tags", [])
-
         user = db.collection("users")
         password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
         user.add({
