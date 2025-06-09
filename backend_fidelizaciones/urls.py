@@ -23,6 +23,7 @@ api_patterns = [
     path('users/', include('users.urls')),
     path('restaurants/', include('restaurants.urls')),
     path('menus/', include('menus.urls')),
+    path('payments/', include('payments.urls')),
 ]
 
 urlpatterns = [

@@ -11,6 +11,7 @@ class CustomAuthMiddleware(MiddlewareMixin):
         id_token = request.headers.get('Authorization')
         excluded_paths = [
             '/api/firebase-login/',
+            '/api/restaurants/'
         ]
 
         if request.path in excluded_paths:

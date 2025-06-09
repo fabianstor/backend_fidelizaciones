@@ -5,8 +5,8 @@ from rest_framework.response import Response
 
 def clean_firestore_data(data):
     for key, value in data.items():
-        if hasattr(value, 'path'):  # Es un DocumentReference
-            data[key] = value.path  # o value.id si solo quieres el ID
+        if hasattr(value, 'path'):
+            data[key] = value.path
     return data
 
 
@@ -14,23 +14,26 @@ class RestaurantsView(APIView):
 
     def post(self, request):
         name = request.data.get("name", "")
-        email = request.data.get("email", "")
         image = request.data.get("image", "")
         rate = request.data.get("rate", "")
+        description = request.data.get("description", "")
         address = request.data.get("address", "")
+        tags = request.data.get("tags", [])
 
         restaurant = db.collection("restaurants")
         restaurant.add({
             "name": name,
-            "email": email,
             "address": address,
             "image": image,
-            "rate": rate
+            "rate": rate,
+            "description": description,
+            "tags": tags,
         })
+
         return Response({"message": "Restaurant created successfully"}, status=status.HTTP_201_CREATED)
 
     def get(self, request):
-        restaurants = db.collection("menus").stream()
+        restaurants = db.collection("restaurants").stream()
         response = []
 
         for restaurant in restaurants:
