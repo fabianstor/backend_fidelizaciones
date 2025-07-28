@@ -13,6 +13,7 @@ class CreateUserAPIView(APIView):
         password = request.data.get("password")
         name = request.data.get("name")
         favorites = request.data.get("favorites", [])
+
         display_name = request.data.get("display_name", "")
 
         if not email or not password:

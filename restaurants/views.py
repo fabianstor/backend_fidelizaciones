@@ -25,13 +25,16 @@ class RestaurantsView(APIView):
         phone_number = request.data.get("phone_number", "")
         tags = request.data.get("tags", [])
         address = request.data.get("address", "")
+        password = request.data.get("password", "")
+
         user = db.collection("users")
-        password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+
         user.add({
             "name": owner_name,
             "email": email,
             "phone_number": phone_number,
             "address": address,
+
             "role": RoleEnum.RESTAURANT.value,
         })
         auth.create_user(
