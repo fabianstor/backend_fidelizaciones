@@ -64,8 +64,7 @@ class RestaurantsView(APIView):
         restaurants = db.collection("restaurants").stream()
         response = []
         for restaurant in restaurants:
-            menu_ref = db.document(f"restaurants/{restaurant.id}")
-            foods = db.collection("foods").where("menu", "==", menu_ref).stream()
+            foods = db.collection("foods").stream()
             foods_list = []
             for food in foods:
                 food_dict = food.to_dict()
