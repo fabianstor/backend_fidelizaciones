@@ -13,6 +13,7 @@ class CustomAuthMiddleware(MiddlewareMixin):
         excluded_paths = [
             '/api/firebase-login/',
             '/api/restaurants/'
+            '/api/users/create/'
         ]
 
         if request.path in excluded_paths:
