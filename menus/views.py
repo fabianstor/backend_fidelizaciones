@@ -12,6 +12,7 @@ class MenusView(APIView):
         restaurant_id = request.data.get("restaurant_id")
         category = request.data.get("category")
         price = request.data.get("price")
+        preparationTime = request.data.get("preparationTime")
         image = request.data.get("image")
 
         restaurant_ref = db.collection("restaurants").document(restaurant_id)
@@ -29,6 +30,7 @@ class MenusView(APIView):
             "description": description,
             "available": True,
             "restaurant_id": restaurant_ref,
+            "preparationTime": preparationTime
         })
 
         return Response({"message": "Menu created successfully"}, status=status.HTTP_201_CREATED)
@@ -60,6 +62,7 @@ class MenusView(APIView):
         restaurant_id = request.data.get("restaurant_id")
         category = request.data.get("category")
         price = request.data.get("price")
+        preparationTime = request.data.get("preparationTime")
         image = request.data.get("image")
 
         if not name or not description or not restaurant_id or not category or not price:
@@ -73,6 +76,7 @@ class MenusView(APIView):
             "category": category,
             "price": price,
             "available": True,
+            "preparationTime": preparationTime,
             "image": image,
             "restaurant_id": db.document(f"restaurants/{restaurant_id}"),
         })
