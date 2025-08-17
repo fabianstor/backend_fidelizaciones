@@ -12,7 +12,7 @@ class MenusView(APIView):
         restaurant_id = request.data.get("restaurant_id")
         category = request.data.get("category")
         price = request.data.get("price")
-        preparationTime = request.data.get("preparationTime")
+        preparation_time = request.data.get("preparation_time")
         image = request.data.get("image")
 
         restaurant_ref = db.collection("restaurants").document(restaurant_id)
@@ -29,8 +29,9 @@ class MenusView(APIView):
             "price": price,
             "description": description,
             "available": True,
+            "state": True,
             "restaurant_id": restaurant_ref,
-            "preparationTime": preparationTime
+            "preparation_time": preparation_time
         })
 
         return Response({"message": "Menu created successfully"}, status=status.HTTP_201_CREATED)
@@ -39,7 +40,10 @@ class MenusView(APIView):
     def get(self, request):
         restaurant_id = request.query_params.get("restaurant_id")
         restaurant_ref = db.collection("restaurants").document(restaurant_id)
-        menus = db.collection("foods").where("restaurant_id", "==", restaurant_ref).stream()
+        menus = db.collection("foods") \
+            .where("restaurant_id", "==", restaurant_ref) \
+            .where("state", "==", True) \
+            .stream()
         if not menus:
             return Response({"message": "No menus found"}, status=status.HTTP_404_NOT_FOUND)
         response = []
@@ -62,7 +66,7 @@ class MenusView(APIView):
         restaurant_id = request.data.get("restaurant_id")
         category = request.data.get("category")
         price = request.data.get("price")
-        preparationTime = request.data.get("preparationTime")
+        preparation_time = request.data.get("preparation_time")
         image = request.data.get("image")
 
         if not name or not description or not restaurant_id or not category or not price:
@@ -76,14 +80,19 @@ class MenusView(APIView):
             "category": category,
             "price": price,
             "available": True,
-            "preparationTime": preparationTime,
+            "preparation_time": preparation_time,
             "image": image,
             "restaurant_id": db.document(f"restaurants/{restaurant_id}"),
         })
-        return Response({"message": "Menu updated successfully"}, status=status.HTTP_200_OK)
+        return Response({"message": "Food updated successfully"}, status=status.HTTP_200_OK)
 
     def patch(self, request, pk):
         available = request.data.get("available", True)
         foods = db.collection("foods").document(pk)
         foods.update({"available": available})
-        return Response({"message": "Menu availability updated successfully"}, status=status.HTTP_200_OK)
+        return Response({"message": "Food availability updated successfully"}, status=status.HTTP_200_OK)
+
+    def delete(self, request, pk):
+        foods = db.collection("foods").document(pk)
+        foods.update({"state": False})
+        return Response({"message": "Food deleted successfully"}, status=status.HTTP_200_OK)
