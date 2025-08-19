@@ -73,6 +73,10 @@ class MenusView(APIView):
             return Response({"message": "Todos los campos son requeridos"}, status=status.HTTP_400_BAD_REQUEST)
 
         foods = db.collection("foods").document(pk)
+        restaurant_ref = db.collection("restaurants").document(restaurant_id)
+
+        if not restaurant_id:
+            return Response({"error": "restaurant_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         foods.update({
             "name": name,
@@ -82,7 +86,7 @@ class MenusView(APIView):
             "available": True,
             "preparation_time": preparation_time,
             "image": image,
-            "restaurant_id": db.document(f"restaurants/{restaurant_id}"),
+            "restaurant_id": restaurant_ref,
         })
         return Response({"message": "Food updated successfully"}, status=status.HTTP_200_OK)
 

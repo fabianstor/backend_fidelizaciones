@@ -61,33 +61,76 @@ class RestaurantsView(APIView):
         return Response({"message": "Restaurant created successfully"}, status=status.HTTP_201_CREATED)
 
     def get(self, request):
-        restaurants = db.collection("restaurants").stream()
-        response = []
-        for restaurant in restaurants:
-            restaurant_ref = db.collection("restaurants").document(restaurant.id)
-            foods = db.collection("foods").where("restaurant_id", "==", restaurant_ref).stream()
-            foods_list = []
-            for food in foods:
-                food_dict = food.to_dict()
-                clean_firestore_data(food_dict)
-                food_dict["id"] = food.id
-                foods_list.append(food_dict)
-            restaurant_data = restaurant.to_dict()
-            clean_firestore_data(restaurant_data)
-            restaurant_data["foods"] = foods_list
-            restaurant_data["id"] = restaurant.id
-            response.append(restaurant_data)
-        return Response({"message": "Restaurants list", "data": response}, status=status.HTTP_200_OK)
+            restaurant_id = request.query_params.get("restaurant_id", None)
+            response = []
+
+            if restaurant_id:
+                # Obtener un solo restaurante y envolverlo en una lista
+                doc = db.collection("restaurants").document(restaurant_id).get()
+                if not doc.exists:
+                    return Response(
+                        {"error": "Restaurant not found"},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+                restaurants = [doc]
+            else:
+                # Obtener todos los restaurantes
+                restaurants = db.collection("restaurants").stream()
+
+            # Procesar cada restaurante
+            for restaurant in restaurants:
+                restaurant_ref = db.collection("restaurants").document(restaurant.id)
+
+                # Obtener sus foods
+                foods = db.collection("foods").where("restaurant_id", "==", restaurant_ref).stream()
+                foods_list = []
+                for food in foods:
+                    food_dict = food.to_dict()
+                    clean_firestore_data(food_dict)
+                    food_dict["id"] = food.id
+                    foods_list.append(food_dict)
+
+                # Construir respuesta del restaurante
+                restaurant_data = restaurant.to_dict()
+                clean_firestore_data(restaurant_data)
+                restaurant_data["id"] = restaurant.id
+                restaurant_data["foods"] = foods_list
+
+                response.append(restaurant_data)
+
+            return Response(
+                {"message": "Restaurants list", "data": response},
+                status=status.HTTP_200_OK
+            )
 
     def put(self, request, restaurant_id):
-        name = request.data.get("name")
-        image = request.data.get("image", "")
-        rate = request.data.get("rate", "")
+        name = request.data.get("name", "")
+        owner_name = request.data.get("owner_name", "")
+        description = request.data.get("description", "")
+        email = request.data.get("email", "")
+        phone_number = request.data.get("phone_number", "")
+        tags = request.data.get("tags", [])
+        address = request.data.get("address", "")
         restaurant = db.collection("restaurants").document(restaurant_id)
+        if not restaurant.exists:
+            return Response({"error": "Restaurant not found"}, status=status.HTTP_404_NOT_FOUND)
+        user_ref = restaurant.get().to_dict().get("user")
+        if not user_ref:
+            return Response({"error": "User not found for this restaurant"}, status=status.HTTP_404_NOT_FOUND)
+        user = db.collection("users").document(user_ref.id)
+        if not user.exists:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        user.update({
+            "name": owner_name,
+            "email": email,
+            "phone_number": phone_number,
+            "address": address,
+        })
         restaurant.update({
             "name": name,
-            "image": image,
-            "rate": rate
+            "description": description,
+            "address": address,
+            "tags": tags,
         })
         return Response({"message": "Restaurant updated successfully"}, status=status.HTTP_200_OK)
 
