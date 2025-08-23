@@ -111,28 +111,37 @@ class RestaurantsView(APIView):
         phone_number = request.data.get("phone_number", "")
         tags = request.data.get("tags", [])
         address = request.data.get("address", "")
-        restaurant = db.collection("restaurants").document(restaurant_id)
+
+        restaurant_ref = db.collection("restaurants").document(restaurant_id)
+        restaurant = restaurant_ref.get()
+
         if not restaurant.exists:
             return Response({"error": "Restaurant not found"}, status=status.HTTP_404_NOT_FOUND)
-        user_ref = restaurant.get().to_dict().get("user")
+
+        user_ref = restaurant.to_dict().get("user")
         if not user_ref:
             return Response({"error": "User not found for this restaurant"}, status=status.HTTP_404_NOT_FOUND)
-        user = db.collection("users").document(user_ref.id)
+
+        user = user_ref.get()
         if not user.exists:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-        user.update({
+
+        user_ref.update({
             "name": owner_name,
             "email": email,
             "phone_number": phone_number,
             "address": address,
         })
-        restaurant.update({
+
+        restaurant_ref.update({
             "name": name,
             "description": description,
             "address": address,
             "tags": tags,
         })
+
         return Response({"message": "Restaurant updated successfully"}, status=status.HTTP_200_OK)
+
 
     @action(detail=True, methods=['post'], url_path='activate')
     def active(self, request, restaurant_id):

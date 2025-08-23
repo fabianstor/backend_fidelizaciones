@@ -11,6 +11,8 @@ class CreateUserAPIView(APIView):
     def post(self, request):
         email = request.data.get("email")
         password = request.data.get("password")
+        document_type = request.data.get("document_type", "")
+        document_number = request.data.get("document_number", "")
         name = request.data.get("name")
         favorites = request.data.get("favorites", [])
         display_name = request.data.get("display_name", "")
@@ -23,9 +25,17 @@ class CreateUserAPIView(APIView):
                 password=password,
                 display_name=display_name,
             )
+            validate_user_document = db.collection("users").where("document_number", "==", document_number).stream()
+            for doc in validate_user_document:
+                return Response({"error": "Document number already exists"}, status=status.HTTP_400_BAD_REQUEST)
+            validate_user_email = db.collection("users").where("email", "==", email).stream()
+            for doc in validate_user_email:
+                return Response({"error": "Email already exists"}, status=status.HTTP_400_BAD_REQUEST)
             users = db.collection("users")
             users.add({
                 "name": name,
+                "document_type": document_type,
+                "document_number": document_number,
                 "role": "client",
                 "favorites": favorites,
                 "email": email,
@@ -41,6 +51,8 @@ class CreateUserAPIView(APIView):
     def put(self, request, pk):
         name = request.data.get("name")
         email = request.data.get("email")
+        document_type = request.data.get("document_type", "")
+        document_number = request.data.get("document_number", "")
         favorites = request.data.get("favorites", [])
         display_name = request.data.get("display_name", "")
 
@@ -48,14 +60,19 @@ class CreateUserAPIView(APIView):
             return Response({"error": "Name and email are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            auth.update_user(
-                pk,
-                email=email,
-                display_name=display_name,
-            )
+            validate_user_document = db.collection("users").where("document_number", "==", document_number).stream()
+            for doc in validate_user_document:
+                if doc.id != pk:
+                    return Response({"error": "Document number already exists"}, status=status.HTTP_400_BAD_REQUEST)
+            validate_user_email = db.collection("users").where("email", "==", email).stream()
+            for doc in validate_user_email:
+                if doc.id != pk:
+                    return Response({"error": "Email already exists"}, status=status.HTTP_400_BAD_REQUEST)
             users = db.collection("users").document(pk)
             users.update({
                 "name": name,
+                "document_type": document_type,
+                "document_number": document_number,
                 "email": email,
                 "favorites": favorites,
             })
