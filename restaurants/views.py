@@ -23,6 +23,10 @@ class RestaurantsView(APIView):
         description = request.data.get("description", "")
         email = request.data.get("email", "")
         phone_number = request.data.get("phone_number", "")
+        website = request.data.get("website", "")
+        opening_hours = request.data.get("opening_hours", "")
+        price_range = request.data.get("price_range", "")
+        image = request.data.get("image", "")
         tags = request.data.get("tags", [])
         address = request.data.get("address", "")
         password = request.data.get("password", "")
@@ -34,7 +38,6 @@ class RestaurantsView(APIView):
             "email": email,
             "phone_number": phone_number,
             "address": address,
-
             "role": RoleEnum.RESTAURANT.value,
         })
         auth.create_user(
@@ -52,6 +55,10 @@ class RestaurantsView(APIView):
             "name": name,
             "user": db.document(f"users/{user_id}"),
             "description": description,
+            "image": image,
+            "website": website,
+            "opening_hours": opening_hours,
+            "price_range": price_range,
             "address": address,
             "tags": tags,
             "rate": 4.5,
@@ -63,9 +70,7 @@ class RestaurantsView(APIView):
     def get(self, request):
             restaurant_id = request.query_params.get("restaurant_id", None)
             response = []
-
             if restaurant_id:
-                # Obtener un solo restaurante y envolverlo en una lista
                 doc = db.collection("restaurants").document(restaurant_id).get()
                 if not doc.exists:
                     return Response(
@@ -74,14 +79,9 @@ class RestaurantsView(APIView):
                     )
                 restaurants = [doc]
             else:
-                # Obtener todos los restaurantes
                 restaurants = db.collection("restaurants").stream()
-
-            # Procesar cada restaurante
             for restaurant in restaurants:
                 restaurant_ref = db.collection("restaurants").document(restaurant.id)
-
-                # Obtener sus foods
                 foods = db.collection("foods").where("restaurant_id", "==", restaurant_ref).stream()
                 foods_list = []
                 for food in foods:
@@ -89,11 +89,16 @@ class RestaurantsView(APIView):
                     clean_firestore_data(food_dict)
                     food_dict["id"] = food.id
                     foods_list.append(food_dict)
-
-                # Construir respuesta del restaurante
+                phone_number = None
+                user_ref = restaurant.to_dict().get("user")
+                if user_ref:
+                    user = user_ref.get()
+                    if user.exists:
+                        phone_number = user.to_dict().get("phone_number")
                 restaurant_data = restaurant.to_dict()
                 clean_firestore_data(restaurant_data)
                 restaurant_data["id"] = restaurant.id
+                restaurant_data["phone_number"] = phone_number
                 restaurant_data["foods"] = foods_list
 
                 response.append(restaurant_data)
@@ -107,6 +112,10 @@ class RestaurantsView(APIView):
         name = request.data.get("name", "")
         owner_name = request.data.get("owner_name", "")
         description = request.data.get("description", "")
+        website = request.data.get("website", "")
+        opening_hours = request.data.get("opening_hours", "")
+        price_range = request.data.get("price_range", "")
+        image = request.data.get("image", "")
         email = request.data.get("email", "")
         phone_number = request.data.get("phone_number", "")
         tags = request.data.get("tags", [])
@@ -136,6 +145,10 @@ class RestaurantsView(APIView):
         restaurant_ref.update({
             "name": name,
             "description": description,
+            "image": image,
+            "website": website,
+            "opening_hours": opening_hours,
+            "price_range": price_range,
             "address": address,
             "tags": tags,
         })

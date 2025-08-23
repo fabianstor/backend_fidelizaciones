@@ -3,6 +3,18 @@ from firebase_config import db
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.response import Response
+from google.cloud import firestore
+
+
+
+def clean_firestore_data(data):
+    cleaned = {}
+    for key, value in data.items():
+        if isinstance(value, firestore.DocumentReference):
+            cleaned[key] = value.id
+        else:
+            cleaned[key] = value
+    return cleaned
 
 
 class FirebaseLoginView(APIView):
@@ -43,18 +55,22 @@ class FirebaseLoginView(APIView):
             for doc in restaurant_query:
                 restaurant_id = doc.id
                 break
+            restaurant_doc = db.collection("restaurants").document(restaurant_id).get()
+            restaurant_data = clean_firestore_data(restaurant_doc.to_dict()) if restaurant_id else None
+
             return Response({
                 "id": user_id,
                 "name": user_data.get("name"),
+                "phone_number": user_data.get("phone_number"),
                 "email": user_data.get("email"),
                 "role": user_data.get("role"),
                 "favorites": user_data.get("favorites"),
                 "id_token": id_token,
                 "restaurant_id": restaurant_id,
+                "restaurant_data": restaurant_data,
                 "tokens": 10,
                 "refresh_token": refresh_token
             }, status=status.HTTP_200_OK)
-
         except Exception as e:
             return Response({"error": "Authentication failed", "details": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
