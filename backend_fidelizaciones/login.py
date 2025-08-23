@@ -25,18 +25,11 @@ class FirebaseLoginView(APIView):
         }
 
         try:
-            # Realizar la solicitud a Firebase para autenticar al usuario
             response = requests.post(firebase_url, data=data)
             response_data = response.json()
-
-            # Si Firebase retorna un error, lanzamos una excepción
             if response.status_code != 200:
                 return Response({"error": "Authentication failed", "details": response_data.get('error', {}).get('message')}, status=status.HTTP_400_BAD_REQUEST)
-
-            # Extraer el id_token del usuario autenticado
             id_token = response_data.get('idToken')
-
-            # Opcionalmente, también puedes obtener el refresh token si lo necesitas
             refresh_token = response_data.get('refreshToken')
             user_query = db.collection("users").where("email", "==", email).stream()
             user_doc = next(user_query, None)
@@ -44,7 +37,12 @@ class FirebaseLoginView(APIView):
                 return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
             user_data = user_doc.to_dict()
             user_id = user_doc.id
-            # Devolver el id_token y refresh_token como respuesta al frontend
+            user_ref = db.collection("users").document(user_id)
+            restaurant_query = db.collection("restaurants").where("user", "==", user_ref).limit(1).stream()
+            restaurant_id = None
+            for doc in restaurant_query:
+                restaurant_id = doc.id
+                break
             return Response({
                 "id": user_id,
                 "name": user_data.get("name"),
@@ -52,6 +50,7 @@ class FirebaseLoginView(APIView):
                 "role": user_data.get("role"),
                 "favorites": user_data.get("favorites"),
                 "id_token": id_token,
+                "restaurant_id": restaurant_id,
                 "tokens": 10,
                 "refresh_token": refresh_token
             }, status=status.HTTP_200_OK)

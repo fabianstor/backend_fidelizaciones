@@ -40,6 +40,8 @@ class MenusView(APIView):
     def get(self, request):
         restaurant_id = request.query_params.get("restaurant_id")
         restaurant_ref = db.collection("restaurants").document(restaurant_id)
+        if not restaurant_id:
+            return Response({"error": "restaurant not found"}, status=status.HTTP_404_NOT_FOUND)
         menus = db.collection("foods") \
             .where("restaurant_id", "==", restaurant_ref) \
             .where("state", "==", True) \
