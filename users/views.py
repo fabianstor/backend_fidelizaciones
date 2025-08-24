@@ -80,3 +80,34 @@ class CreateUserAPIView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ListUsersAPIView(APIView):
+
+    def get(self, request):
+        user_id = request.query_params.get("user_id", None)
+        if user_id:
+            user_doc = db.collection("users").document(user_id).get()
+            if not user_doc.exists:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            user_data = user_doc.to_dict()
+            user_points_ref = db.collection("user_points").where("user_id", "==", user_id).get()
+            user_data["points"] = 0
+            if user_points_ref:
+                points_doc = user_points_ref[0]
+                user_data["points"] = points_doc.to_dict().get("points", 0)
+            user_data["id"] = user_doc.id
+            return Response({"users": user_data}, status=status.HTTP_200_OK)
+        users_ref = db.collection("users")
+        users = users_ref.stream()
+        users_list = []
+        for user in users:
+            user_dict = user.to_dict()
+            user_points_ref = db.collection("user_points").where("user_id", "==", user.id).get()
+            user_dict["points"] = 0
+            if user_points_ref:
+                points_doc = user_points_ref[0]
+                user_dict["points"] = points_doc.to_dict().get("points", 0)
+            user_dict["id"] = user.id
+            users_list.append(user_dict)
+        return Response({"users": users_list}, status=status.HTTP_200_OK)

@@ -1,65 +1,73 @@
 from firebase_config import db
 from rest_framework.views import APIView
 from rest_framework.response import Response
+import random
+import string
+
+
+def generate_code():
+    code = string.ascii_uppercase + string.digits
+    code_start = ''.join(random.choices(code, k=3))
+    code_end = ''.join(random.choices(code, k=3))
+    return f"{code_start}-{code_end}"
 
 
 class PaymentsView(APIView):
 
     def post(self, request):
-        cvv = request.POST.get("cvv", "")
-        card_number = request.POST.get("card_number", "")
-        expiration_date = request.POST.get("expiration_date", "")
-        owner = request.POST.get("owner", "")
-        restaurant_id = request.POST.get("restaurant_id", "")
-        user_id = request.POST.get("user_id", "")
-        foods = request.POST.get("foods", [])
-        amount = request.POST.get("amount", "")
+        user_id = request.data.get("user_id")
+        products = request.data.get("products", [])
+        restaurant_id = request.data.get("restaurant_id")
+        points = request.data.get("points", 0)
+        amount = request.data.get("amount")
 
-        payments = db.collection("payments")
-        payments.add({
-            "cvv": cvv,
-            "card_number": card_number,
-            "expiration_date": expiration_date,
-            "owner": owner,
-            "restaurant_id": restaurant_id,
+        if not products or not restaurant_id or amount is None:
+            return Response({"error": "Faltan datos obligatorios"}, status=400)
+
+        approval_code = generate_code()
+
+        user_points = db.collection("user_points").where("user_id", "==", user_id).get()
+        if user_points:
+            doc = user_points[0]
+            current_points = doc.to_dict().get("points", 0)
+            db.collection("user_points").document(doc.id).update({"points": current_points - points})
+        payment_data ={
             "user_id": user_id,
-            "foods": foods,
-            "amount": amount
-        })
-
-        return Response({"message": "Payment created successfully"}, status=201)
-
-    def get(self, request):
-        payments = db.collection("payments").stream()
-        response = []
-
-        for payment in payments:
-            payment_dict = payment.to_dict()
-            payment_dict["id"] = payment.id
-            response.append(payment_dict)
-
-        return Response({"message": "Payments list", "data": response}, status=200)
-
-    def put(self, request, payment_id):
-        cvv = request.POST.get("cvv", "")
-        card_number = request.POST.get("card_number", "")
-        expiration_date = request.POST.get("expiration_date", "")
-        owner = request.POST.get("owner", "")
-        restaurant_id = request.POST.get("restaurant_id", "")
-        user_id = request.POST.get("user_id", "")
-        foods = request.POST.get("foods", [])
-        amount = request.POST.get("amount", "")
-
-        payment_ref = db.document(f"payments/{payment_id}")
-        payment_ref.update({
-            "cvv": cvv,
-            "card_number": card_number,
-            "expiration_date": expiration_date,
+            "products": products,
             "restaurant_id": restaurant_id,
-            "user_id": user_id,
-            "foods": foods,
-            "owner": owner,
-            "amount": amount
-        })
+            "points": points,
+            "approval_code": approval_code,
+            "amount": amount,
+            "status": "pending"
+        }
+        db.collection("payments").add(payment_data)
+        return Response({"approval_code0": approval_code, "message": "Pago solicitado exitosamente"}, status=200)
 
-        return Response({"message": "Payment updated successfully"}, status=200)
+    def put(self, request):
+        approval_code = request.data.get("approval_code", None)
+        approval = request.data.get("approval", False)
+        if not approval_code:
+            return Response({"error": "approval_code es obligatorio"}, status=400)
+        docs = db.collection("payments").where("approval_code", "==", approval_code).stream()
+        nuevo_estado = "approved" if approval else "rejected"
+        for doc in docs:
+            doc.reference.update({"status": nuevo_estado})
+        payment_docs = db.collection("payments").where("approval_code", "==", approval_code).get()
+        if not payment_docs:
+            return Response({"error": "Pago no encontrado"}, status=404)
+        payment = payment_docs[0].to_dict()
+        amount = payment.get("amount", 0)
+        user_id = payment.get("user_id")
+        user_points_ref = db.collection("user_points").where("user_id", "==", user_id).get()
+        points_to_add = amount * 0.01
+        if user_points_ref:
+            doc = user_points_ref[0]
+            current_points = doc.to_dict().get("points", 0)
+            new_points = current_points + points_to_add
+            db.collection("user_points").document(doc.id).update({"points": new_points})
+        else:
+            db.collection("user_points").add({
+                "user_id": user_id,
+                "points": points_to_add,
+            })
+        return Response("Pago gestionado con éxito", status=200)

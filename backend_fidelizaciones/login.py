@@ -57,10 +57,17 @@ class FirebaseLoginView(APIView):
                 break
             restaurant_doc = db.collection("restaurants").document(restaurant_id).get()
             restaurant_data = clean_firestore_data(restaurant_doc.to_dict()) if restaurant_id else None
-
+            user_points_ref = db.collection("user_points").where("user_id", "==", user_id).get()
+            user_data["points"] = 0
+            if user_points_ref:
+                points_doc = user_points_ref[0]
+                user_data["points"] = points_doc.to_dict().get("points", 0)
             return Response({
                 "id": user_id,
                 "name": user_data.get("name"),
+                "points": user_data.get("points", 0),
+                "document_type": user_data.get("document_type"),
+                "document_number": user_data.get("document_number"),
                 "phone_number": user_data.get("phone_number"),
                 "email": user_data.get("email"),
                 "role": user_data.get("role"),
