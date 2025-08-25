@@ -1,6 +1,7 @@
 from firebase_config import db
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from google.cloud.firestore import DocumentReference
 import random
 import string
 
@@ -10,6 +11,16 @@ def generate_code():
     code_start = ''.join(random.choices(code, k=3))
     code_end = ''.join(random.choices(code, k=3))
     return f"{code_start}-{code_end}"
+
+def clean_firestore_data(data):
+    """Convierte DocumentReference en string (id del doc) recursivamente"""
+    if isinstance(data, dict):
+        return {k: clean_firestore_data(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [clean_firestore_data(v) for v in data]
+    elif isinstance(data, DocumentReference):
+        return data.id  # o data.path si quieres la ruta completa
+    return data
 
 
 class PaymentsView(APIView):
@@ -71,3 +82,70 @@ class PaymentsView(APIView):
                 "points": points_to_add,
             })
         return Response("Pago gestionado con éxito", status=200)
+
+
+from rest_framework.response import Response
+from google.cloud.firestore import DocumentReference
+
+def clean_firestore_data(data):
+    """Convierte DocumentReference en string (id del doc) recursivamente"""
+    if isinstance(data, dict):
+        return {k: clean_firestore_data(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [clean_firestore_data(v) for v in data]
+    elif isinstance(data, DocumentReference):
+        return data.id  # o data.path si quieres la ruta completa
+    return data
+
+
+class PaymentDetailView(APIView):
+    def get(self, request):
+        pk = request.query_params.get("id", None)
+        restaurant_id = request.query_params.get("restaurant_id", None)
+        if not pk and not restaurant_id:
+            return Response({"error": "id o restaurant_id es obligatorio"}, status=400)
+        if pk:
+            payment_doc = db.collection("payments").document(pk).get()
+            if not payment_doc.exists:
+                return Response({"error": "Pago no encontrado"}, status=404)
+
+            payment_data = payment_doc.to_dict()
+            payment_data["id"] = payment_doc.id
+            if "products" in payment_data:
+                full_products = []
+                for product in payment_data["products"]:
+                    product_id = product.get("product_id")
+                    if product_id:
+                        product_doc = db.collection("foods").document(product_id).get()
+                        if product_doc.exists:
+                            product_data = product_doc.to_dict()
+                            product_data["id"] = product_doc.id
+                            product.update(clean_firestore_data(product_data))
+                    full_products.append(clean_firestore_data(product))
+                payment_data["products"] = full_products
+
+            payment_data = clean_firestore_data(payment_data)
+            return Response(payment_data, status=200)
+        if restaurant_id:
+            payments = db.collection("payments").where("restaurant_id", "==", restaurant_id).stream()
+            response = []
+            for payment in payments:
+                payment_data = payment.to_dict()
+                payment_data["id"] = payment.id
+
+                if "products" in payment_data:
+                    full_products = []
+                    for product in payment_data["products"]:
+                        product_id = product.get("product_id")
+                        if product_id:
+                            product_doc = db.collection("foods").document(product_id).get()
+                            if product_doc.exists:
+                                product_data = product_doc.to_dict()
+                                product_data["id"] = product_doc.id
+                                product.update(clean_firestore_data(product_data))
+                        full_products.append(clean_firestore_data(product))
+                    payment_data["products"] = full_products
+
+                response.append(clean_firestore_data(payment_data))
+
+            return Response({"details": response}, status=200)
