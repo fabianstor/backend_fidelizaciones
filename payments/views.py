@@ -101,9 +101,10 @@ def clean_firestore_data(data):
 class PaymentDetailView(APIView):
     def get(self, request):
         pk = request.query_params.get("id", None)
+        approval_code = request.query_params.get("approval_code", None)
         restaurant_id = request.query_params.get("restaurant_id", None)
-        if not pk and not restaurant_id:
-            return Response({"error": "id o restaurant_id es obligatorio"}, status=400)
+        if not pk and not restaurant_id and not approval_code:
+            return Response({"error": "id o restaurant_id o approval_code es obligatorio"}, status=400)
         if pk:
             payment_doc = db.collection("payments").document(pk).get()
             if not payment_doc.exists:
@@ -149,3 +150,23 @@ class PaymentDetailView(APIView):
                 response.append(clean_firestore_data(payment_data))
 
             return Response({"details": response}, status=200)
+        if approval_code:
+            payment_docs = db.collection("payments").where("approval_code", "==", approval_code).get()
+            if not payment_docs:
+                return Response({"error": "Pago no encontrado"}, status=404)
+            payment = payment_docs[0].to_dict()
+            payment["id"] = payment_docs[0].id
+            if "products" in payment:
+                full_products = []
+                for product in payment["products"]:
+                    product_id = product.get("product_id")
+                    if product_id:
+                        product_doc = db.collection("foods").document(product_id).get()
+                        if product_doc.exists:
+                            product_data = product_doc.to_dict()
+                            product_data["id"] = product_doc.id
+                            product.update(clean_firestore_data(product_data))
+                    full_products.append(clean_firestore_data(product))
+                payment["products"] = full_products
+            payment = clean_firestore_data(payment)
+            return Response(payment, status=200)
