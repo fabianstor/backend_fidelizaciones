@@ -42,7 +42,7 @@ class CreateUserAPIView(APIView):
                 "name": name,
                 "document_type": document_type,
                 "document_number": document_number,
-                "role": "client",
+                "role": "customer",
                 "favorites": favorites,
                 "email": email,
             })
