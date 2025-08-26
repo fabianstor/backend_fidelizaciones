@@ -18,8 +18,14 @@ class CreateUserAPIView(APIView):
         display_name = request.data.get("display_name", "")
 
         if not email or not password:
-            return Response({"error": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Correo y contraseña requeridos"}, status=status.HTTP_400_BAD_REQUEST)
         try:
+            validate_user_document = db.collection("users").where("document_number", "==", document_number).stream()
+            for doc in validate_user_document:
+                return Response({"error": "Número de documento ya está registrado"}, status=status.HTTP_400_BAD_REQUEST)
+            validate_user_email = db.collection("users").where("email", "==", email).stream()
+            for doc in validate_user_email:
+                return Response({"error": "Correo electronico ya está registrado"}, status=status.HTTP_400_BAD_REQUEST)
             user = auth.create_user(
                 email=email,
                 password=password,
