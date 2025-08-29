@@ -57,12 +57,13 @@ class PaymentsView(APIView):
     def put(self, request):
         approval_code = request.data.get("approval_code", None)
         approval = request.data.get("approval", False)
+        reason = request.data.get("reason", "")
         if not approval_code:
             return Response({"error": "approval_code es obligatorio"}, status=400)
         docs = db.collection("payments").where("approval_code", "==", approval_code).stream()
-        nuevo_estado = "approved" if approval else "rejected"
+        new_status = "approved" if approval else "rejected"
         for doc in docs:
-            doc.reference.update({"status": nuevo_estado})
+            doc.reference.update({"status": new_status, "reason": reason})
         payment_docs = db.collection("payments").where("approval_code", "==", approval_code).get()
         if not payment_docs:
             return Response({"error": "Pago no encontrado"}, status=404)
@@ -100,73 +101,72 @@ def clean_firestore_data(data):
 
 class PaymentDetailView(APIView):
     def get(self, request):
-        pk = request.query_params.get("id", None)
-        approval_code = request.query_params.get("approval_code", None)
-        restaurant_id = request.query_params.get("restaurant_id", None)
-        if not pk and not restaurant_id and not approval_code:
-            return Response({"error": "id o restaurant_id o approval_code es obligatorio"}, status=400)
+        pk = request.query_params.get("id")
+        approval_code = request.query_params.get("approval_code")
+        restaurant_id = request.query_params.get("restaurant_id")
+
+        if not (pk or restaurant_id or approval_code):
+            return Response(
+                {"error": "id o restaurant_id o approval_code es obligatorio"},
+                status=400
+            )
+
+        def enrich_products(payment_data):
+            """Agrega info de productos al pago"""
+            if "products" not in payment_data:
+                return payment_data
+
+            full_products = []
+            for product in payment_data["products"]:
+                product_id = product.get("product_id")
+                if product_id:
+                    product_doc = db.collection("foods").document(product_id).get()
+                    if product_doc.exists:
+                        product_data = product_doc.to_dict()
+                        product_data["id"] = product_doc.id
+                        product.update(clean_firestore_data(product_data))
+                full_products.append(clean_firestore_data(product))
+            payment_data["products"] = full_products
+            return payment_data
+
+        def enrich_user(payment_data):
+            """Agrega info de usuario al pago"""
+            user_id = payment_data.get("user_id")
+            if user_id:
+                user_doc = db.collection("users").document(user_id).get()
+                if user_doc.exists:
+                    user_data = user_doc.to_dict()
+                    user_data["id"] = user_doc.id
+                    payment_data["user"] = clean_firestore_data(user_data)
+            return payment_data
+
+        def serialize_payment(doc):
+            """Convierte documento de firestore en dict enriquecido"""
+            data = doc.to_dict()
+            data["id"] = doc.id
+            data = enrich_products(data)
+            data = enrich_user(data)
+            return clean_firestore_data(data)
+
+        payments = []
+
+        # Buscar por id
         if pk:
             payment_doc = db.collection("payments").document(pk).get()
             if not payment_doc.exists:
                 return Response({"error": "Pago no encontrado"}, status=404)
+            payments = [serialize_payment(payment_doc)]
 
-            payment_data = payment_doc.to_dict()
-            payment_data["id"] = payment_doc.id
-            if "products" in payment_data:
-                full_products = []
-                for product in payment_data["products"]:
-                    product_id = product.get("product_id")
-                    if product_id:
-                        product_doc = db.collection("foods").document(product_id).get()
-                        if product_doc.exists:
-                            product_data = product_doc.to_dict()
-                            product_data["id"] = product_doc.id
-                            product.update(clean_firestore_data(product_data))
-                    full_products.append(clean_firestore_data(product))
-                payment_data["products"] = full_products
+        # Buscar por restaurant_id
+        elif restaurant_id:
+            docs = db.collection("payments").where("restaurant_id", "==", restaurant_id).stream()
+            payments = [serialize_payment(doc) for doc in docs]
 
-            payment_data = clean_firestore_data(payment_data)
-            return Response(payment_data, status=200)
-        if restaurant_id:
-            payments = db.collection("payments").where("restaurant_id", "==", restaurant_id).stream()
-            response = []
-            for payment in payments:
-                payment_data = payment.to_dict()
-                payment_data["id"] = payment.id
-
-                if "products" in payment_data:
-                    full_products = []
-                    for product in payment_data["products"]:
-                        product_id = product.get("product_id")
-                        if product_id:
-                            product_doc = db.collection("foods").document(product_id).get()
-                            if product_doc.exists:
-                                product_data = product_doc.to_dict()
-                                product_data["id"] = product_doc.id
-                                product.update(clean_firestore_data(product_data))
-                        full_products.append(clean_firestore_data(product))
-                    payment_data["products"] = full_products
-
-                response.append(clean_firestore_data(payment_data))
-
-            return Response({"details": response}, status=200)
-        if approval_code:
-            payment_docs = db.collection("payments").where("approval_code", "==", approval_code).get()
-            if not payment_docs:
+        # Buscar por approval_code
+        elif approval_code:
+            docs = db.collection("payments").where("approval_code", "==", approval_code).get()
+            if not docs:
                 return Response({"error": "Pago no encontrado"}, status=404)
-            payment = payment_docs[0].to_dict()
-            payment["id"] = payment_docs[0].id
-            if "products" in payment:
-                full_products = []
-                for product in payment["products"]:
-                    product_id = product.get("product_id")
-                    if product_id:
-                        product_doc = db.collection("foods").document(product_id).get()
-                        if product_doc.exists:
-                            product_data = product_doc.to_dict()
-                            product_data["id"] = product_doc.id
-                            product.update(clean_firestore_data(product_data))
-                    full_products.append(clean_firestore_data(product))
-                payment["products"] = full_products
-            payment = clean_firestore_data(payment)
-            return Response(payment, status=200)
+            payments = [serialize_payment(doc) for doc in docs]
+
+        return Response({"details": payments}, status=200)

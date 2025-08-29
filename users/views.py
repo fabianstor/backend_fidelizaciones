@@ -11,8 +11,10 @@ class CreateUserAPIView(APIView):
     def post(self, request):
         email = request.data.get("email")
         password = request.data.get("password")
+        role = request.data.get("role", "customer")
         document_type = request.data.get("document_type", "")
         document_number = request.data.get("document_number", "")
+        phone_number = request.data.get("phone_number", "")
         name = request.data.get("name")
         favorites = request.data.get("favorites", [])
         display_name = request.data.get("display_name", "")
@@ -42,7 +44,8 @@ class CreateUserAPIView(APIView):
                 "name": name,
                 "document_type": document_type,
                 "document_number": document_number,
-                "role": "customer",
+                "phone_number": phone_number,
+                "role": role,
                 "favorites": favorites,
                 "email": email,
             })
@@ -60,12 +63,20 @@ class CreateUserAPIView(APIView):
         document_type = request.data.get("document_type", "")
         document_number = request.data.get("document_number", "")
         favorites = request.data.get("favorites", [])
+        phone_number = request.data.get("phone_number", "")
+        password = request.data.get("password", "")
         display_name = request.data.get("display_name", "")
 
         if not name or not email:
             return Response({"error": "Name and email are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
+            if password:
+                user = auth.get_user_by_email(email)
+                auth.update_user(
+                    user.uid,
+                    password=password
+                )
             validate_user_document = db.collection("users").where("document_number", "==", document_number).stream()
             for doc in validate_user_document:
                 if doc.id != pk:
@@ -78,6 +89,7 @@ class CreateUserAPIView(APIView):
             users.update({
                 "name": name,
                 "document_type": document_type,
+                "phone_number": phone_number,
                 "document_number": document_number,
                 "email": email,
                 "favorites": favorites,

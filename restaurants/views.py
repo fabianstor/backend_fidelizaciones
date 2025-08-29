@@ -115,6 +115,7 @@ class RestaurantsView(APIView):
         website = request.data.get("website", "")
         opening_hours = request.data.get("opening_hours", "")
         price_range = request.data.get("price_range", "")
+        password = request.data.get("password", "")
         image = request.data.get("image", "")
         email = request.data.get("email", "")
         phone_number = request.data.get("phone_number", "")
@@ -128,6 +129,12 @@ class RestaurantsView(APIView):
             return Response({"error": "Restaurant not found"}, status=status.HTTP_404_NOT_FOUND)
 
         user_ref = restaurant.to_dict().get("user")
+        if password:
+            user = auth.get_user_by_email(email)
+            auth.update_user(
+                user.uid,
+                password=password
+            )
         if not user_ref:
             return Response({"error": "User not found for this restaurant"}, status=status.HTTP_404_NOT_FOUND)
 

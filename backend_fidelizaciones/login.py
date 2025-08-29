@@ -65,7 +65,7 @@ class FirebaseLoginView(APIView):
             return Response({
                 "id": user_id,
                 "name": user_data.get("name"),
-                "points": user_data.get("points", 0),
+                "tokens": user_data.get("points", 0),
                 "document_type": user_data.get("document_type"),
                 "document_number": user_data.get("document_number"),
                 "phone_number": user_data.get("phone_number"),
@@ -75,7 +75,6 @@ class FirebaseLoginView(APIView):
                 "id_token": id_token,
                 "restaurant_id": restaurant_id,
                 "restaurant_data": restaurant_data,
-                "tokens": 10,
                 "refresh_token": refresh_token
             }, status=status.HTTP_200_OK)
         except Exception as e:
