@@ -4,8 +4,6 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
-import random
-import string
 from firebase_admin import auth
 
 def clean_firestore_data(data):
@@ -69,6 +67,7 @@ class RestaurantsView(APIView):
 
     def get(self, request):
             restaurant_id = request.query_params.get("restaurant_id", None)
+            active = request.query_params.get("active", True)
             response = []
             if restaurant_id:
                 doc = db.collection("restaurants").document(restaurant_id).get()
@@ -79,7 +78,7 @@ class RestaurantsView(APIView):
                     )
                 restaurants = [doc]
             else:
-                restaurants = db.collection("restaurants").stream()
+                restaurants = db.collection("restaurants").where("active", "==", active).stream()
             for restaurant in restaurants:
                 restaurant_ref = db.collection("restaurants").document(restaurant.id)
                 foods = db.collection("foods").where("restaurant_id", "==", restaurant_ref).stream()
@@ -165,6 +164,18 @@ class RestaurantsView(APIView):
 
     @action(detail=True, methods=['post'], url_path='activate')
     def active(self, request, restaurant_id):
-        restaurant = db.collection("restaurants").document(restaurant_id)
-        restaurant.update({"active": True})
-        return Response({"message": "Restaurant activated successfully"}, status=status.HTTP_200_OK)
+        restaurant_ref = db.collection("restaurants").document(restaurant_id)
+        restaurant_doc = restaurant_ref.get()
+        if not restaurant_doc.exists:
+            return Response({"error": "Restaurant not found"}, status=status.HTTP_404_NOT_FOUND)
+        current_status = restaurant_doc.to_dict().get("active", False)
+        new_status = not current_status
+        restaurant_ref.update({"active": new_status})
+        return Response(
+            {
+                "message": f"Restaurant {'activated' if new_status else 'deactivated'} successfully",
+                "active": new_status
+            },
+            status=status.HTTP_200_OK
+        )
+

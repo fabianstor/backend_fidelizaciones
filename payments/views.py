@@ -1,5 +1,7 @@
+import datetime
 from firebase_config import db
 from rest_framework.views import APIView
+from datetime import datetime, timezone
 from rest_framework.response import Response
 from google.cloud.firestore import DocumentReference
 import random
@@ -47,6 +49,7 @@ class PaymentsView(APIView):
             "products": products,
             "restaurant_id": restaurant_id,
             "points": points,
+            'created_at': datetime.now(timezone.utc),
             "approval_code": approval_code,
             "amount": amount,
             "status": "pending"
@@ -84,9 +87,6 @@ class PaymentsView(APIView):
             })
         return Response("Pago gestionado con éxito", status=200)
 
-
-from rest_framework.response import Response
-from google.cloud.firestore import DocumentReference
 
 def clean_firestore_data(data):
     """Convierte DocumentReference en string (id del doc) recursivamente"""
