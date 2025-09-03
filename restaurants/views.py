@@ -78,6 +78,8 @@ class RestaurantsView(APIView):
                     )
                 restaurants = [doc]
             else:
+                if active == 'false':
+                    active = False
                 restaurants = db.collection("restaurants").where("active", "==", active).stream()
             for restaurant in restaurants:
                 restaurant_ref = db.collection("restaurants").document(restaurant.id)
