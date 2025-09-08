@@ -169,9 +169,7 @@ class RestaurantsView(APIView):
 
         return Response({"message": "Restaurant updated successfully"}, status=status.HTTP_200_OK)
 
-
-    @action(detail=True, methods=['post'], url_path='activate')
-    def active(self, request, restaurant_id):
+    def patch(self, request, restaurant_id):
         restaurant_ref = db.collection("restaurants").document(restaurant_id)
         restaurant_doc = restaurant_ref.get()
         if not restaurant_doc.exists:
