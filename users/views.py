@@ -77,6 +77,12 @@ class CreateUserAPIView(APIView):
                     user.uid,
                     password=password
                 )
+            if email:
+                user = auth.get_user_by_email(email)
+                auth.update_user(
+                    user.id,
+                    email=email
+                )
             validate_user_document = db.collection("users").where("document_number", "==", document_number).stream()
             for doc in validate_user_document:
                 if doc.id != pk:
