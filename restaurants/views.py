@@ -68,6 +68,7 @@ class RestaurantsView(APIView):
     def get(self, request):
             restaurant_id = request.query_params.get("restaurant_id", None)
             active = request.query_params.get("active", True)
+            all_restaurants = request.query_params.get("all_restaurants", False)
             response = []
             if restaurant_id:
                 doc = db.collection("restaurants").document(restaurant_id).get()
@@ -77,6 +78,8 @@ class RestaurantsView(APIView):
                         status=status.HTTP_404_NOT_FOUND
                     )
                 restaurants = [doc]
+            elif all_restaurants == 'true':
+                restaurants = db.collection("restaurants").stream()
             else:
                 if active == 'false':
                     active = False
