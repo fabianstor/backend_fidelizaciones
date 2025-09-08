@@ -91,14 +91,20 @@ class RestaurantsView(APIView):
                     food_dict["id"] = food.id
                     foods_list.append(food_dict)
                 phone_number = None
+                email = None
+                owner_name = None
                 user_ref = restaurant.to_dict().get("user")
                 if user_ref:
                     user = user_ref.get()
                     if user.exists:
                         phone_number = user.to_dict().get("phone_number")
+                        email = user.to_dict().get("email")
+                        owner_name = user.to_dict().get('name')
                 restaurant_data = restaurant.to_dict()
                 clean_firestore_data(restaurant_data)
                 restaurant_data["id"] = restaurant.id
+                restaurant_data["email"] = email
+                restaurant_data["owner_name"] = owner_name
                 restaurant_data["phone_number"] = phone_number
                 restaurant_data["foods"] = foods_list
 
