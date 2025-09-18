@@ -80,7 +80,7 @@ class CreateUserAPIView(APIView):
             if email:
                 user = auth.get_user_by_email(email)
                 auth.update_user(
-                    user.id,
+                    user.uid,
                     email=email
                 )
             validate_user_document = db.collection("users").where("document_number", "==", document_number).stream()
